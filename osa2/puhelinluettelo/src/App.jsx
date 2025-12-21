@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
-import axios from 'axios'
+import personService from './services/personService'
+import Notification from './Components/Notification'
 
 const Filter = ({ setNewFilter }) => {
   return (
@@ -9,14 +10,14 @@ const Filter = ({ setNewFilter }) => {
   )
 }
 
-const PersonForm = ({ handleNewNote, setNewName, setNewNumber }) => {
+const PersonForm = ({ handleNewPerson, newName, setNewName, newNumber, setNewNumber }) => {
   return (
-    <form onSubmit={handleNewNote}>
+    <form onSubmit={handleNewPerson}>
       <div>
-        name: <input onChange={(e) => setNewName(e.target.value)}/>
+        name: <input value={newName} onChange={(e) => setNewName(e.target.value)}/>
       </div>
       <div>
-        number: <input onChange={(e) => setNewNumber(e.target.value)}/>
+        number: <input value={newNumber} onChange={(e) => setNewNumber(e.target.value)}/>
       </div>
       <div>
         <button type="submit">add</button>
@@ -25,7 +26,7 @@ const PersonForm = ({ handleNewNote, setNewName, setNewNumber }) => {
   )
 }
 
-const Persons = ({ persons, newFilter }) => {
+const Persons = ({ persons, newFilter, deletePerson }) => {
   return (
     <div>
       {persons
@@ -33,9 +34,14 @@ const Persons = ({ persons, newFilter }) => {
           person.name.toLowerCase().includes(newFilter.toLowerCase())
         )
         .map((person) => (
-          <p key={person.name}>
-            {person.name} {person.number}
-          </p>
+          <div key={person.name}>
+            <p>
+              {person.name} {person.number}
+            </p>
+            <button onClick={() => deletePerson(person.id, person.name)}>
+                delete
+            </button>
+          </div>
         ))
       }
     </div>
@@ -47,40 +53,119 @@ const App = () => {
   const [newName, setNewName] = useState('')
   const [newNumber, setNewNumber] = useState('')
   const [newFilter, setNewFilter] = useState('')
+  const [successMessage, setSuccessMessage] = useState(null)
 
   useEffect(() => {
-    axios.get("http://localhost:3001/persons")
-      .then(response => {
-        setPersons(response.data)
-      })
-      .catch(error => console.error("Error fetching data:", error))
+    personService
+      .getAll()
+      .then(initialPersons => setPersons(initialPersons))
   }, [])
 
-  const handleNewNote = (e) => {
+  const handleNewPerson = (e) => {
     e.preventDefault()
 
     const isNameHere = persons.some((person) => person.name === newName)
 
-    isNameHere
-      ? alert(`${newName} is already added to phonebook`)
-      : setPersons((prevPersons) => [...prevPersons,
-        {name: newName, number: newNumber}])
+    if (isNameHere) {
+      if (window.confirm(`${newName} is already added to phonebook, replace the old number with a new one?`)) {
+        const person = persons.find(p => p.name == newName)
+        const changedPerson = { ...person, number: newNumber }
+        
+        personService
+          .replace(person.id, changedPerson)
+          .then(returnedPerson => {
+            setPersons(prevPersons => 
+              prevPersons.map(p => p.id !== person.id ? p : returnedPerson)
+            )
+            setSuccessMessage({
+              text: `Changed ${returnedPerson.name}`,
+              type: 'success'
+            })
+            setTimeout(() => setSuccessMessage(null), 5000)
+
+            // Reset the states
+            setNewName('');
+            setNewNumber('');
+          })
+          .catch(error => {
+            setPersons(persons.filter(p => p.id !== person.id))
+
+            setSuccessMessage({
+              text: `Information of ${person.name} has already been removed from the server`,
+              type: 'error'
+            })
+            setTimeout(() => setSuccessMessage(null), 5000)
+          })
+      }
+    } else {
+      const newObject = { name: newName, number: newNumber };
+
+      personService
+        .create(newObject)
+        .then(returnedPerson => {
+          // Use the server's data to update the state since the server automatically adds the id
+          setPersons(prevPersons => [...prevPersons, returnedPerson]);
+
+          setSuccessMessage({
+            text: `Added ${returnedPerson.name}`,
+            type: 'success'
+          })
+          setTimeout(() => setSuccessMessage(null), 5000)
+
+          // Reset the states
+          setNewName('');
+          setNewNumber('');
+        })
+        .catch(error => {
+          console.error("There was an error saving the contact!", error);
+        });
+      }
   }
 
+const deletePerson = (id, name) => {
+  if (window.confirm(`Delete ${name}?`)) {
+    personService
+      .remove(id)
+      .then(() => {
+        // Success! Now remove from local state
+        setPersons(prevPersons => prevPersons.filter(p => p.id !== id))
+
+        setSuccessMessage({
+          text: `Deleted ${name}`,
+          type: 'success'
+        })
+        setTimeout(() => setSuccessMessage(null), 5000)
+      })
+      .catch(error => {
+        // Clean up local state anyway since it's gone from the server
+        setPersons(prevPersons => prevPersons.filter(p => p.id !== id))
+
+        setSuccessMessage({
+          text: `Information of ${name} has already been removed from the server`,
+          type: 'error'
+        })
+        setTimeout(() => setSuccessMessage(null), 5000)
+      })
+  }
+}
   return (
     <div>
       <h2>Phonebook</h2>
+      <Notification message={successMessage} />
       <Filter setNewFilter={setNewFilter}/>
       <h3>Add a new</h3>
       <PersonForm
-        handleNewNote={handleNewNote}
+        handleNewPerson={handleNewPerson}
+        newName={newName}
         setNewName={setNewName}
+        newNumber={newNumber}
         setNewNumber={setNewNumber}
       />
       <h3>Numbers</h3>
       <Persons
         persons={persons}
         newFilter={newFilter}
+        deletePerson={deletePerson}
       />
     </div>
   )
