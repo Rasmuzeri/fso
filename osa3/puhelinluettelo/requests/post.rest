@@ -1,0 +1,24 @@
+POST http://localhost:3001/api/persons
+Content-Type: application/json
+
+{
+    "name": "Random Guyz",
+    "number": "040-67676767"
+}
+
+### Missing name
+POST http://localhost:3001/api/persons
+Content-Type: application/json
+
+{
+    "number": "040-67676767"
+}
+
+### Duplicate name
+POST http://localhost:3001/api/persons
+Content-Type: application/json
+
+{
+    "name": "Arto Hellas",
+    "number": "000-000000"
+}
