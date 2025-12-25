@@ -64,12 +64,6 @@ app.delete('/api/persons/:id', (request, response, next) => {
 app.post('/api/persons', (request, response, next) => {
     const body = request.body
 
-    if (!body.name || !body.number) {
-        return response.status(400).json({ 
-            error: 'Name or number missing' 
-        })
-    }
-
     Person.findOne({ name: body.name })
         .then(existingPerson => {
             if (existingPerson) {
@@ -85,10 +79,7 @@ app.post('/api/persons', (request, response, next) => {
             return person.save()
         })
         .then(savedPerson => {
-            // Check if savedPerson exists
-            if (savedPerson) {
-                response.json(savedPerson)
-            }
+            response.json(savedPerson)
         })
         .catch(error => next(error))
 })
@@ -96,20 +87,13 @@ app.post('/api/persons', (request, response, next) => {
 app.put('/api/persons/:id', (request, response, next) => {
     const body = request.body
 
-    // Manual validation: usually, we should use Mongoose's built-in validations 
-    // in the schema, but we are doing it manually for now
-    if (!body.number) {
-        return response.status(400).json({ 
-            error: 'number missing' 
-        })
-    }
-
     const person = {
         number: body.number // We are only allowed to change the number
     }
 
     // Use new: true because by default we would return the outdated person
-    Person.findByIdAndUpdate(request.params.id, person, { new: true })
+    Person.findByIdAndUpdate(request.params.id, person,
+        { new: true, runValidators: true, context: 'query' }) // With post, .save handles validators automatically
         .then(updatedPerson => {
             if (updatedPerson) {
                 response.json(updatedPerson)

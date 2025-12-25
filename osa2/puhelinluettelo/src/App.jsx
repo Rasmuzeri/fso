@@ -117,7 +117,11 @@ const App = () => {
           setNewNumber('');
         })
         .catch(error => {
-          console.error("There was an error saving the contact!", error);
+          setSuccessMessage({
+            text: error.response.data.error,
+            type: 'error'
+          })
+          setTimeout(() => setSuccessMessage(null), 5000)
         });
       }
   }
