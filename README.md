@@ -1,1 +1,1 @@
-3.11 puhelinluettelo: https://puhelinluettelo-2025.azurewebsites.net/ (Please allow 30–60 seconds for the initial load; courtesy of Azure’s F-tier plan, which requires a spin-up period if the site has been idle)
+Puhelinluettelo: https://puhelinluettelo-2025.azurewebsites.net/ (Please allow 30–60 seconds for the initial load; courtesy of Azure’s F-tier plan, which requires a spin-up period if the site has been idle)
