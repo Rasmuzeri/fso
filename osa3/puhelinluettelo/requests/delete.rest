@@ -1,1 +1,2 @@
-DELETE http://localhost:3001/api/persons/2
+DELETE http://localhost:3001/api/persons/idHere
+### Change id to something that's in the db
